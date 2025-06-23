@@ -1,0 +1,29 @@
+[project]
+name = "healthcare-multi-agent-mcp"
+version = "0.1.0"
+description = "A distributed healthcare assistant using multi-agent architecture (A2A + MCP + Gemini)"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "asyncclick>=8.1.8",                # For CLI interfaces
+    "click>=8.1.8",                     # Dependency of asyncclick
+    "google-adk>=1.0.0",                # Gemini via Google SDK
+    "httpx>=0.28.1",                    # HTTP requests for A2A and discovery
+    "httpx-sse>=0.4.0",                 # For streaming responses
+    "langchain-google-genai>=2.1.4",    # LangChain + Gemini integration
+    "langchain-mcp-adapters>=0.0.11",   # MCP to LangChain tool adapter
+    "langgraph>=0.4.3",                 # Workflow-style agent graphs
+    "mcp>=1.8.0",                       # Model Context Protocol support
+    "pydantic>=2.11.3",                 # Data validation and modeling
+    "python-dotenv>=1.1.0",             # For .env file loading
+    "starlette>=0.46.2",                # Lightweight ASGI web framework
+    "uvicorn>=0.34.2",                  # ASGI server to run agents
+]
+
+[tool.setuptools]
+packages = ["agents", "server", "client", "app", "models", "utilities"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,217 @@
+Metadata-Version: 2.4
+Name: healthcare-multi-agent-mcp
+Version: 0.1.0
+Summary: A distributed healthcare assistant using multi-agent architecture (A2A + MCP + Gemini)
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: asyncclick>=8.1.8
+Requires-Dist: click>=8.1.8
+Requires-Dist: google-adk>=1.0.0
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: httpx-sse>=0.4.0
+Requires-Dist: langchain-google-genai>=2.1.4
+Requires-Dist: langchain-mcp-adapters>=0.0.11
+Requires-Dist: langgraph>=0.4.3
+Requires-Dist: mcp>=1.8.0
+Requires-Dist: pydantic>=2.11.3
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: starlette>=0.46.2
+Requires-Dist: uvicorn>=0.34.2
+
+# =============================================================================
+
+# README.md
+
+# =============================================================================
+
+# 🤖 version\_4\_multi\_agent\_mcp — Healthcare Use Case Edition
+
+🎯 **Purpose**
+This repository demonstrates a distributed multi-agent system tailored for **Healthcare Assistance**, combining **Google’s Agent-to-Agent (A2A)** protocol with **Anthropic’s Model Context Protocol (MCP)**.
+
+It showcases a modular architecture where:
+
+* A **Host OrchestratorAgent** delegates health-related queries,
+* **Child agents** (SymptomChecker, Appointment, HealthRecords) handle domain-specific requests,
+* **MCP Servers** expose external tools (e.g., lab lookup, insurance eligibility, or prescription refill).
+
+---
+
+## 🚀 Features
+
+* **A2A Protocol** – Agents register themselves and call each other via JSON-RPC.
+* **MCP Integration** – External tools are automatically discovered and callable via stdio.
+* **Orchestrator Agent** – Uses LLM logic to delegate to agents or tools intelligently.
+* **Dynamic Discovery** – Agents and tools can be hot-plugged via config files.
+
+---
+
+## 🏗️ Project Structure (Healthcare Edition)
+
+```bash
+version_4_multi_agent_mcp/
+├── .env                          # Contains GOOGLE_API_KEY (gitignored)
+├── pyproject.toml                # Poetry/uv metadata
+├── README.md                     # This file
+├── utilities/
+│   ├── a2a/
+│   │   ├── agent_discovery.py     # Reads agent_registry.json
+│   │   ├── agent_connect.py       # For A2A task delegation
+│   │   └── agent_registry.json    # Lists child A2A agents
+│   └── mcp/
+│       ├── mcp_discovery.py       # Reads mcp_config.json
+│       ├── mcp_connect.py         # Loads & invokes MCP tools
+│       └── mcp_config.json        # MCP server launch config
+├── agents/
+│   ├── symptom_checker_agent/
+│   │   ├── __main__.py            # Launches SymptomCheckerAgent
+│   │   ├── agent.py               # LLM to analyze symptoms
+│   │   └── task_manager.py        # Handles tasks
+│   ├── appointment_agent/
+│   │   ├── __main__.py
+│   │   ├── agent.py               # Books appointments
+│   │   └── task_manager.py
+│   ├── health_records_agent/
+│   │   ├── __main__.py
+│   │   ├── agent.py               # Retrieves patient data
+│   │   └── task_manager.py
+│   └── host_agent/
+│       ├── entry.py               # Starts the OrchestratorAgent
+│       ├── orchestrator.py        # LLM logic + A2A + MCP routing
+├── server/
+│   ├── server.py                  # A2A server implementation
+│   └── task_manager.py            # Base/In-memory task store
+├── client/
+│   └── a2a_client.py              # JSON-RPC client
+├── app/
+│   └── cmd/
+│       └── cmd.py                 # CLI to test the system
+└── models/
+    ├── agent.py
+    ├── request.py
+    ├── task.py
+    └── json_rpc.py
+```
+
+---
+
+## 🛠️ Prerequisites
+
+* Python 3.11+
+* `uv` package manager (optional but recommended)
+* `GOOGLE_API_KEY` (Gemini/Vertex access required)
+
+---
+
+## ⚙️ Setup Instructions
+
+```bash
+# 1. Clone the repo
+$ git clone https://github.com/your-org/healthcare-multi-agent-mcp.git
+$ cd version_4_multi_agent_mcp
+
+# 2. Set up Python env
+$ uv venv
+$ source .venv/bin/activate
+$ uv sync
+
+# 3. Add your credentials
+$ echo "GOOGLE_API_KEY=your-gemini-key" > .env
+```
+
+---
+
+## 🎬 Running the Demo
+
+### ✅ 1. Start the Healthcare Agents
+
+```bash
+uv run python3 -m agents.symptom_checker_agent --host localhost --port 11001
+uv run python3 -m agents.appointment_agent --host localhost --port 11002
+uv run python3 -m agents.health_records_agent --host localhost --port 11003
+```
+
+### ✅ 2. Start the Host Agent
+
+```bash
+uv run python3 -m agents.host_agent.entry --host localhost --port 11000
+```
+
+### ✅ 3. Use the CLI to test
+
+```bash
+uv run python3 -m app.cmd.cmd --agent http://localhost:11000
+```
+
+---
+
+## ⚙️ Configuration
+
+### `agent_registry.json`
+
+```json
+[
+  "http://localhost:11001",
+  "http://localhost:11002",
+  "http://localhost:11003"
+]
+```
+
+### `mcp_config.json`
+
+```json
+{
+  "mcpServers": {
+    "lab_tools": {
+      "command": "python",
+      "args": ["lab_tool_server.py"]
+    },
+    "insurance_checker": {
+      "command": "python",
+      "args": ["insurance_tool_server.py"]
+    }
+  }
+}
+```
+
+---
+
+## 📖 Architecture Overview
+
+1. **Client** sends task to `HostAgent`.
+2. `HostAgent` uses Gemini to classify the task:
+
+   * If **appointment** → forward to `AppointmentAgent`
+   * If **symptom analysis** → forward to `SymptomCheckerAgent`
+   * If **records needed** → forward to `HealthRecordsAgent`
+   * If **external tool** → forward to MCP-discovered server (e.g., Lab, Insurance)
+3. Each agent or tool responds via JSON-RPC.
+
+---
+
+## 🔧 Extending the System
+
+* Add a new agent → register its URL in `agent_registry.json`
+* Add a new tool → add to `mcp_config.json`
+* Define your tool logic using `mcp.tool()` decorators
+
+---
+
+## 📎 Example Queries
+
+```bash
+> check symptoms: fever, cough
+> book appointment with cardiologist
+> fetch records for patient ID 12245
+> check insurance eligibility for BlueShield
+```
+
+---
+
+## 🙋‍♂️ Need Help?
+
+* File issues via GitHub
+* Check the `logs/` folder for debug traces
+* Use `--verbose` with CLI to see raw JSON
+
+---

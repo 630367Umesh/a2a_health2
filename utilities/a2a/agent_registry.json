@@ -1,0 +1,14 @@
+[
+  {
+    "id": "appointment_agent",
+    "url": "http://localhost:5010"
+  },
+  {
+    "id": "symptom_checker_agent",
+    "url": "http://localhost:5020"
+  },
+  {
+    "id": "health_records_agent",
+    "url": "http://localhost:5030"
+  }
+]

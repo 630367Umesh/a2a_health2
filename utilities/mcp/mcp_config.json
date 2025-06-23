@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "symptom_checker": {
+      "command": "python",
+      "args": ["SymptomCheckerAgent.py"]
+    },
+    "appointment": {
+      "command": "python",
+      "args": ["appointment_agent.py"]
+    },
+    "health_records": {
+      "command": "python",
+      "args": ["HealthRecordsAgent.py"]
+    }
+  }
+}
