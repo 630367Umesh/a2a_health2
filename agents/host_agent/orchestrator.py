@@ -1,14 +1,14 @@
-import asyncio
+# agents/host_agent/orchestrator.py
+
 import uuid
 import logging
 
-from utilities.a2a.agent_discovery import AgentDiscovery
-from agents.host_agent.task_manager import TaskManager
-from models.agent import AgentCard, AgentCapability
+from models.agent import AgentCard, AgentCapabilities, AgentCapability, AgentSkill
 from server import A2AServer
+from agents.host_agent.task_manager import TaskManager
+from utilities.a2a.agent_discovery import AgentDiscovery
 
 logger = logging.getLogger(__name__)
-
 
 class OrchestratorAgent:
     def __init__(self):
@@ -16,23 +16,30 @@ class OrchestratorAgent:
             id=str(uuid.uuid4()),
             name="OrchestratorAgent",
             description="Routes tasks to the appropriate healthcare agents",
-            capabilities=[
-                AgentCapability(name="routing", description="Routes task to other agents"),
-                AgentCapability(name="mcp", description="Supports Model Context Protocol"),
-                AgentCapability(name="a2a", description="Uses Agent-to-Agent Protocol")
-            ],
-            tools=[{"name": "route_task", "description": "Route task to appropriate agent"}]
+            url="http://localhost:10000",
+            capabilities=AgentCapabilities(
+                capabilities=[
+                    AgentCapability(
+                        type="routing",
+                        skills=[
+                            AgentSkill(name="delegate_to_symptom_agent"),
+                            AgentSkill(name="connect_health_records"),
+                            AgentSkill(name="book_appointments")
+                        ]
+                    )
+                ]
+            )
         )
 
-        self.discovery = AgentDiscovery(registry_path="agent_registry.json")
+        self.discovery = AgentDiscovery("agent_registry.json")
         self.task_manager = TaskManager(discovery=self.discovery)
         self.server = A2AServer(
-            host="0.0.0.0",
-            port=5000,
+            host="localhost",
+            port=10000,
             agent_card=self.agent_card,
             task_manager=self.task_manager
         )
 
     async def start(self):
-        logger.info("Starting OrchestratorAgent...")
+        logger.info(f"🚀 Starting OrchestratorAgent on {self.agent_card.url}")
         await self.server.start()

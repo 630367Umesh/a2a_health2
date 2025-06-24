@@ -1,197 +1,122 @@
-# =============================================================================
+# 🏥 Healthcare Multi-Agent System (MCP + A2A + LLMs)
 
-# README.md
-
-# =============================================================================
-
-# 🤖 version\_4\_multi\_agent\_mcp — Healthcare Use Case Edition
-
-🎯 **Purpose**
-This repository demonstrates a distributed multi-agent system tailored for **Healthcare Assistance**, combining **Google’s Agent-to-Agent (A2A)** protocol with **Anthropic’s Model Context Protocol (MCP)**.
-
-It showcases a modular architecture where:
-
-* A **Host OrchestratorAgent** delegates health-related queries,
-* **Child agents** (SymptomChecker, Appointment, HealthRecords) handle domain-specific requests,
-* **MCP Servers** expose external tools (e.g., lab lookup, insurance eligibility, or prescription refill).
+This project is a modular healthcare assistant powered by multiple AI agents using Google's SDK, Agent-to-Agent (A2A) communication, and Model Context Protocol (MCP).
 
 ---
 
-## 🚀 Features
+## 📦 Agents Included
 
-* **A2A Protocol** – Agents register themselves and call each other via JSON-RPC.
-* **MCP Integration** – External tools are automatically discovered and callable via stdio.
-* **Orchestrator Agent** – Uses LLM logic to delegate to agents or tools intelligently.
-* **Dynamic Discovery** – Agents and tools can be hot-plugged via config files.
+| Agent ID                | Role                                      | Port     |
+|-------------------------|-------------------------------------------|----------|
+| `host_agent`            | Routes and delegates tasks via A2A        | 10000    |
+| `symptom_checker_agent`| Analyzes symptoms and suggests next steps | 10020    |
+| `appointment_agent`    | Schedules appointments with specialists   | 10010    |
+| `health_records_agent` | Manages patient health records            | 10030    |
 
 ---
 
-## 🏗️ Project Structure (Healthcare Edition)
+## 🗂️ Project Structure
 
-```bash
-version_4_multi_agent_mcp/
-├── .env                          # Contains GOOGLE_API_KEY (gitignored)
-├── pyproject.toml                # Poetry/uv metadata
-├── README.md                     # This file
-├── utilities/
-│   ├── a2a/
-│   │   ├── agent_discovery.py     # Reads agent_registry.json
-│   │   ├── agent_connect.py       # For A2A task delegation
-│   │   └── agent_registry.json    # Lists child A2A agents
-│   └── mcp/
-│       ├── mcp_discovery.py       # Reads mcp_config.json
-│       ├── mcp_connect.py         # Loads & invokes MCP tools
-│       └── mcp_config.json        # MCP server launch config
+health_care/
+│
 ├── agents/
-│   ├── symptom_checker_agent/
-│   │   ├── __main__.py            # Launches SymptomCheckerAgent
-│   │   ├── agent.py               # LLM to analyze symptoms
-│   │   └── task_manager.py        # Handles tasks
-│   ├── appointment_agent/
-│   │   ├── __main__.py
-│   │   ├── agent.py               # Books appointments
-│   │   └── task_manager.py
-│   ├── health_records_agent/
-│   │   ├── __main__.py
-│   │   ├── agent.py               # Retrieves patient data
-│   │   └── task_manager.py
-│   └── host_agent/
-│       ├── entry.py               # Starts the OrchestratorAgent
-│       ├── orchestrator.py        # LLM logic + A2A + MCP routing
-├── server/
-│   ├── server.py                  # A2A server implementation
-│   └── task_manager.py            # Base/In-memory task store
-├── client/
-│   └── a2a_client.py              # JSON-RPC client
-├── app/
-│   └── cmd/
-│       └── cmd.py                 # CLI to test the system
-└── models/
-    ├── agent.py
-    ├── request.py
-    ├── task.py
-    └── json_rpc.py
-```
+│ ├── host_agent/ # OrchestratorAgent
+│ ├── symptom_checker_agent/ # Symptom checking logic
+│ ├── appointment_agent/ # Appointment scheduling
+│ └── health_records_agent/ # Medical records handler
+│
+├── client/ # JSON-RPC task sender
+│ └── send_symptom_check_task.py
+│
+├── models/ # Shared Pydantic models
+│
+├── server/ # A2AServer base class (Starlette)
+│
+├── ui/ # Optional Streamlit frontend
+│
+├── llm_config.py # LLM provider configuration
+├── agent_registry.json # MCP agent directory
+├── requirements.txt # Python dependencies
+└── README.md # Project documentation
+
+
 
 ---
 
-## 🛠️ Prerequisites
+## 🧠 LLM Configuration
 
-* Python 3.11+
-* `uv` package manager (optional but recommended)
-* `GOOGLE_API_KEY` (Gemini/Vertex access required)
+Edit `llm_config.py` to configure models per agent:
 
----
-
-## ⚙️ Setup Instructions
-
-```bash
-# 1. Clone the repo
-$ git clone https://github.com/your-org/healthcare-multi-agent-mcp.git
-$ cd version_4_multi_agent_mcp
-
-# 2. Set up Python env
-$ uv venv
-$ source .venv/bin/activate
-$ uv sync
-
-# 3. Add your credentials
-$ echo "GOOGLE_API_KEY=your-gemini-key" > .env
-```
-
----
-
-## 🎬 Running the Demo
-
-### ✅ 1. Start the Healthcare Agents
-
-```bash
-uv run python3 -m agents.symptom_checker_agent --host localhost --port 11001
-uv run python3 -m agents.appointment_agent --host localhost --port 11002
-uv run python3 -m agents.health_records_agent --host localhost --port 11003
-```
-
-### ✅ 2. Start the Host Agent
-
-```bash
-uv run python3 -m agents.host_agent.entry --host localhost --port 11000
-```
-
-### ✅ 3. Use the CLI to test
-
-```bash
-uv run python3 -m app.cmd.cmd --agent http://localhost:11000
-```
-
----
-
-## ⚙️ Configuration
-
-### `agent_registry.json`
-
-```json
-[
-  "http://localhost:11001",
-  "http://localhost:11002",
-  "http://localhost:11003"
-]
-```
-
-### `mcp_config.json`
-
-```json
-{
-  "mcpServers": {
-    "lab_tools": {
-      "command": "python",
-      "args": ["lab_tool_server.py"]
+```python
+LLM_CONFIG = {
+    "symptom_checker_agent": {
+        "model": "llama3-70b-8192",
+        "provider": "groq",
+        "api_key": "your-groq-api-key"
     },
-    "insurance_checker": {
-      "command": "python",
-      "args": ["insurance_tool_server.py"]
+    "appointment_agent": {
+        "model": "gemini-1.5-flash-latest",
+        "provider": "google",
+        "api_key": "your-gemini-api-key"
     }
-  }
 }
-```
 
----
+🌐 Agent Registry (MCP)
+Define each agent’s URL and ID in agent_registry.json:
 
-## 📖 Architecture Overview
+[
+  {
+    "id": "appointment_agent",
+    "url": "http://localhost:10010"
+  },
+  {
+    "id": "symptom_checker_agent",
+    "url": "http://localhost:10020"
+  },
+  {
+    "id": "health_records_agent",
+    "url": "http://localhost:10030"
+  }
+]
 
-1. **Client** sends task to `HostAgent`.
-2. `HostAgent` uses Gemini to classify the task:
+🚀 Running Agents
+Run each agent in a separate terminal window:
 
-   * If **appointment** → forward to `AppointmentAgent`
-   * If **symptom analysis** → forward to `SymptomCheckerAgent`
-   * If **records needed** → forward to `HealthRecordsAgent`
-   * If **external tool** → forward to MCP-discovered server (e.g., Lab, Insurance)
-3. Each agent or tool responds via JSON-RPC.
+# Orchestrator Agent
+python agents/host_agent/entry.py
 
----
+# Symptom Checker Agent
+python agents/symptom_checker_agent/__main__.py
 
-## 🔧 Extending the System
+# Appointment Agent
+python agents/appointment_agent/__main__.py
 
-* Add a new agent → register its URL in `agent_registry.json`
-* Add a new tool → add to `mcp_config.json`
-* Define your tool logic using `mcp.tool()` decorators
+# Health Records Agent
+python agents/health_records_agent/__main__.py
 
----
 
-## 📎 Example Queries
 
-```bash
-> check symptoms: fever, cough
-> book appointment with cardiologist
-> fetch records for patient ID 12245
-> check insurance eligibility for BlueShield
-```
 
----
+ Test It
+Run this command to send a symptom check request:
 
-## 🙋‍♂️ Need Help?
+bash
+Copy
+Edit
+python client/send_symptom_check_task.py
+Expected: The request routes through the orchestrator and returns a diagnosis from the symptom_checker_agent.
 
-* File issues via GitHub
-* Check the `logs/` folder for debug traces
-* Use `--verbose` with CLI to see raw JSON
+💻 Optional: Run Streamlit UI
+If you’ve implemented the Streamlit UI:
 
----
+bash
+Copy
+Edit
+streamlit run ui/app.py
+🧰 Troubleshooting
+Issue	Fix
+ImportError: cannot import name 'DiscoveryClient'	Check utilities/a2a/agent_discovery.py contains the right class.
+'TaskManager' object has no attribute 'on_send_task'	Make sure on_send_task() exists in your agent’s task manager.
+404 Not Found on /tasks/send	Check the server is routing POST requests to / or adjust route.
+ValidationError (Pydantic)	Ensure the task has message.parts, id, input, metadata.
+

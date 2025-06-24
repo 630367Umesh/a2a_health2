@@ -1,13 +1,19 @@
+from typing import List, Optional
 from pydantic import BaseModel, HttpUrl
-from typing import List, Optional, Dict
-
-
-class AgentCapability(BaseModel):
-    name: str
 
 
 class AgentSkill(BaseModel):
     name: str
+    description: Optional[str] = None
+
+
+class AgentCapability(BaseModel):
+    type: str  # e.g., "symptom_checking", "appointment_booking"
+    skills: List[AgentSkill]
+
+
+class AgentCapabilities(BaseModel):
+    capabilities: List[AgentCapability]
 
 
 class AgentCard(BaseModel):
@@ -16,6 +22,5 @@ class AgentCard(BaseModel):
     description: Optional[str] = None
     version: Optional[str] = "1.0"
     url: Optional[HttpUrl] = None
-    capabilities: Optional[List[AgentCapability]] = []
-    skills: Optional[List[AgentSkill]] = []
-    tools: Optional[List[Dict[str, str]]] = []
+    capabilities: Optional[AgentCapabilities] = None
+    tools: Optional[List[dict[str, str]]] = []

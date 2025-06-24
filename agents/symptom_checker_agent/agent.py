@@ -9,18 +9,23 @@ from google.adk.artifacts import InMemoryArtifactService
 from google.adk.tools.function_tool import FunctionTool
 from google.genai import types
 
-from utilities.a2a.agent_discovery import AgentDiscovery  # Updated import
+from utilities.a2a.agent_discovery import AgentDiscovery
 from utilities.a2a.agent_connect import AgentConnector
-from llm_config import get_llm_config
+from agents.llm_config import get_llm_config
 
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-
 class SymptomCheckerAgent:
     def __init__(self):
+        # ✅ Load config with model only — don't pass provider/api_key to LlmAgent
         self.config = get_llm_config("symptom_checker")
-        self.discovery = AgentDiscovery()  # Fixed instantiation
+        self.model = self.config.get("model")
+
+        if not self.model:
+            raise ValueError("Missing model in config.")
+
+        self.discovery = AgentDiscovery()
         self.connectors: dict[str, AgentConnector] = {}
         self.orchestrator = self._build_orchestrator()
         self.user_id = "symptom_user"
@@ -63,9 +68,7 @@ class SymptomCheckerAgent:
         tools = [FunctionTool(list_agents), FunctionTool(call_agent)]
 
         return LlmAgent(
-            provider=self.config["provider"],
-            model=self.config["model"],
-            api_key=self.config["api_key"],
+            model=self.model,
             name="symptom_checker_orchestrator",
             description="Analyzes symptoms and delegates to appropriate healthcare agents.",
             instruction=system_instruction,

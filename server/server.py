@@ -1,26 +1,18 @@
+# server/server.py
 import json
 import logging
 from datetime import datetime
-
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-
 from models.agent import AgentCard
 from models.request import A2ARequest, SendTaskRequest
 from models.json_rpc import JSONRPCResponse, InternalError
-
 from uvicorn.config import Config
 from uvicorn.server import Server
 
 logger = logging.getLogger(__name__)
-
-def json_serializer(obj):
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    raise TypeError(f"Unsupported type: {type(obj)}")
-
 
 class A2AServer:
     def __init__(self, host="0.0.0.0", port=5000, agent_card: AgentCard = None, task_manager=None):
@@ -30,13 +22,12 @@ class A2AServer:
         self.task_manager = task_manager
 
         self.app = Starlette()
-        self.app.add_route("/", self._handle_request, methods=["POST"])
+        self.app.add_route("/tasks/send", self._handle_task_send, methods=["POST"])
         self.app.add_route("/.well-known/agent.json", self._get_agent_card, methods=["GET"])
 
     async def start(self):
         if not self.agent_card or not self.task_manager:
             raise ValueError("AgentCard and TaskManager are required to start server.")
-
         config = Config(app=self.app, host=self.host, port=self.port)
         server = Server(config=config)
         await server.serve()
@@ -44,7 +35,7 @@ class A2AServer:
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))
 
-    async def _handle_request(self, request: Request):
+    async def _handle_task_send(self, request: Request):
         try:
             body = await request.json()
             print("\n📨 Incoming JSON-RPC Request:", json.dumps(body, indent=2))

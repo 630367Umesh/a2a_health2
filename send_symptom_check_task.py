@@ -1,30 +1,41 @@
-import uuid
-import requests
+import asyncio
+import httpx
+import json
 
-task_id = str(uuid.uuid4())
+async def send_task():
+    url = "http://localhost:10000/tasks/send"  # Corrected endpoint
 
-url = "http://localhost:5000"
-
-payload = {
-    "jsonrpc": "2.0",
-    "method": "tasks/send",
-    "id": "1",
-    "params": {
-        "task_id": task_id,
-        "id": task_id,
-        "message": {
-            "type": "symptom_check",
-            "content": "fever, headache"
-        },
-        "metadata": {
-            "source": "test_ui"
+    payload = {
+        "jsonrpc": "2.0",
+        "id": "check-symptoms-task-001",
+        "method": "tasks/send",
+        "params": {
+            "id": "check-symptoms-task-001",
+            "message": {
+                "role": "user",
+                "parts": [
+                    {"type": "text", "text": "I have a fever, cough, and sore throat."}
+                ]
+            },
+            "input": {
+                "symptoms": "fever, cough, sore throat"
+            },
+            "metadata": {
+                "user_id": "user-001"
+            }
         }
     }
-}
 
-print(">>\nSending request to:", url)
-response = requests.post(url, json=payload)
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
 
-print("🔵 Status Code:", response.status_code)
-print("📨 Response JSON:")
-print(response.json())
+        print("Status Code:", response.status_code)
+        print("Raw Text:", response.text)
+
+        try:
+            print("✅ JSON Response:", response.json())
+        except Exception as e:
+            print("❌ JSON decode failed:", str(e))
+
+if __name__ == "__main__":
+    asyncio.run(send_task())

@@ -1,5 +1,6 @@
 README.md
 pyproject.toml
+agents/llm_config.py
 app/__init__.py
 app/cmd.py
 client/client.py
